@@ -1,0 +1,45 @@
+drop table if exists request_info;
+
+CREATE TABLE `request_info` (
+`id`  int(64) NOT NULL AUTO_INCREMENT COMMENT '主键' ,
+`url`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '请求的URL' ,
+`method`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '请求的方法（GET，POST，PUT，DELETE）' ,
+`param`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '参数' ,
+`status`  int(1) NOT NULL DEFAULT 0 COMMENT '当前请求处理的状态：0：待处理（默认），1：提交成功，2：提交失败（需要继续提交），3：回滚成功，4：回滚失败（需要继续回滚），5：人工干预' ,
+`deleted`  int(1) NOT NULL DEFAULT 0 COMMENT '删除标记；0：正常，1：删除' ,
+`create_time`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '创建时间' ,
+`update_time`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间' ,
+PRIMARY KEY (`id`)
+)
+ENGINE=InnoDB
+DEFAULT CHARACTER SET=utf8 COLLATE=utf8_general_ci
+AUTO_INCREMENT=23
+ROW_FORMAT=DYNAMIC
+;
+
+
+
+drop table if exists success_step;
+
+CREATE TABLE `success_step` (
+`id`  int(64) NOT NULL AUTO_INCREMENT COMMENT '主键自增' ,
+`request_id`  int(64) NOT NULL DEFAULT 0 COMMENT '外键--request_info的主键' ,
+`url`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '请求的URL' ,
+`method`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '请求的方法（GET，POST，PUT，DELETE）' ,
+`param`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '参数' ,
+`result`  varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '' COMMENT '请求成功后返回的结果' ,
+`status`  int(1) NOT NULL DEFAULT 0 COMMENT '状态，0：try，1：confirm，2：cancel' ,
+`deleted`  int(1) NOT NULL DEFAULT 0 COMMENT '删除标记；0：正常，1：删除' ,
+`create_time`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '创建时间' ,
+`update_time`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间' ,
+PRIMARY KEY (`id`)
+)
+ENGINE=InnoDB
+DEFAULT CHARACTER SET=utf8 COLLATE=utf8_general_ci
+ROW_FORMAT=DYNAMIC
+;
+
+
+
+
+
