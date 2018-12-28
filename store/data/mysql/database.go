@@ -33,22 +33,22 @@ func NewMysqlClient(user, pwd, host, port, database string) *MysqlClient {
 	}
 }
 
-func (c *MysqlClient) InsertRequestInfo(r *data.RequestInfo) (int64, error) {
+func (c *MysqlClient) InsertRequestInfo(r *data.RequestInfo) (error) {
 	sql := `INSERT INTO request_info (url, method, param) values(?, ?, ?)`
 	rst, err := c.c.Exec(sql, r.Url, r.Method, r.Param)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	id, err := rst.LastInsertId()
 	if err != nil {
-		return 0, err
+		return err
 	}
-
-	return id, nil
+	r.Id = id
+	return nil
 }
 
-func (c *MysqlClient) UpdateRequestInfo(status int, id int64) error {
+func (c *MysqlClient) UpdateRequestInfoStatus(status int, id int64) error {
 	sql := `UPDATE request_info SET status = ? where id = ?`
 	_, err := c.c.Exec(sql, status, id)
 	return err
@@ -84,7 +84,7 @@ func (c *MysqlClient) ListExceptionalRequestInfo() ([]*data.RequestInfo, error) 
 	if err != nil {
 		return nil, err
 	}
-	sql = `SELECT id, request_id, idx, url, method, status, try_result, param FROM success_step WHERE request_id = ? AND status = 0`
+	sql = `SELECT id, request_id, idx, url, method, status, try_result, param FROM success_step WHERE request_id = ? AND status = 0 AND deleted = 0`
 	for idx, ri := range rst {
 		var ss []*data.SuccessStep
 		err = c.c.Select(&ss, sql, ri.Id)
@@ -97,17 +97,18 @@ func (c *MysqlClient) ListExceptionalRequestInfo() ([]*data.RequestInfo, error) 
 	return rst, nil
 }
 
-func (c *MysqlClient) InsertSuccessStep(s *data.SuccessStep) (int64, error) {
+func (c *MysqlClient) InsertSuccessStep(s *data.SuccessStep) (error) {
 	sql := `INSERT INTO success_step (request_id, idx, status, url, method, param, try_result) values(?, ?, ?, ?, ?, ?, ?)`
 	rst, err := c.c.Exec(sql, s.RequestId, s.Index, s.Status, s.Url, s.Method, s.Param, s.Result)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	id, err := rst.LastInsertId()
 	if err != nil {
-		return 0, err
+		return err
 	}
-	return id, nil
+	s.Id = id
+	return nil
 }
 
 func (c *MysqlClient) UpdateSuccessStepStatus(id int64, status int) error {

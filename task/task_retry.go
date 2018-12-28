@@ -2,15 +2,18 @@ package task
 
 import (
 	"encoding/json"
+	"fmt"
 	"tcc_transaction/constant"
 	"tcc_transaction/global"
 	"tcc_transaction/log"
 	"tcc_transaction/model"
 	"tcc_transaction/store/data"
 	"tcc_transaction/util"
+	"time"
 )
 
 func taskToRetry(needRollbackData []*data.RequestInfo) {
+	println(fmt.Sprintf("start to retry, data is : %+v", needRollbackData))
 	for _, v := range needRollbackData {
 		if len(v.SuccessSteps) == 0 {
 			continue
@@ -41,18 +44,18 @@ func confirm(api *model.RuntimeApi) {
 	for _, v := range ri.SuccessSteps {
 		// confirm
 		cURL := util.URLRewrite(api.UrlPattern, ri.Url, api.Nodes[v.Index].Confirm.Url)
-		_, err := util.HttpForward(cURL, api.Nodes[v.Index].Confirm.Method, []byte(v.Param), nil, 0)
+		_, err := util.HttpForward(cURL, api.Nodes[v.Index].Confirm.Method, []byte(v.Param), nil, time.Duration(api.Nodes[v.Index].Confirm.Timeout))
 		if err != nil {
 			isErr = true
 			log.Errorf("asynchronous to confirm failed, please check it. error information is: %s", err)
 			continue
 		}
-		c.UpdateSuccessStepStatus(v.Id, constant.RequestTypeConfirm)
+		global.C.UpdateSuccessStepStatus(v.Id, constant.RequestTypeConfirm)
 	}
 	if !isErr {
-		c.Confirm(ri.Id)
+		global.C.Confirm(ri.Id)
 	} else {
-		c.UpdateRequestInfoTimes(ri.Id)
+		global.C.UpdateRequestInfoTimes(ri.Id)
 	}
 }
 
@@ -62,7 +65,7 @@ func cancel(api *model.RuntimeApi) {
 	for _, v := range ri.SuccessSteps {
 		// cancel
 		cURL := util.URLRewrite(api.UrlPattern, ri.Url, api.Nodes[v.Index].Cancel.Url)
-		dt, err := util.HttpForward(cURL, api.Nodes[v.Index].Cancel.Method, []byte(v.Param), nil, 0)
+		dt, err := util.HttpForward(cURL, api.Nodes[v.Index].Cancel.Method, []byte(v.Param), nil, time.Duration(api.Nodes[v.Index].Cancel.Timeout))
 		if err != nil {
 			isErr = true
 			log.Errorf("asynchronous to cancel failed, please check it. error information is: %s", err)
@@ -83,11 +86,11 @@ func cancel(api *model.RuntimeApi) {
 			continue
 		}
 
-		c.UpdateSuccessStepStatus(v.Id, constant.RequestTypeCancel)
+		global.C.UpdateSuccessStepStatus(v.Id, constant.RequestTypeCancel)
 	}
 	if !isErr {
-		c.UpdateRequestInfo(constant.RequestInfoStatus_3, ri.Id)
+		global.C.UpdateRequestInfoStatus(constant.RequestInfoStatus_3, ri.Id)
 	} else {
-		c.UpdateRequestInfoTimes(ri.Id)
+		global.C.UpdateRequestInfoTimes(ri.Id)
 	}
 }

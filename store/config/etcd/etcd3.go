@@ -21,14 +21,14 @@ type etcd3 struct {
 }
 
 type WatchResult struct {
-	KV *mvccpb.KeyValue
+	KV      *mvccpb.KeyValue
 	OptType string
 }
 
 func (w *WatchResult) ReverseToByte() []byte {
-	if w != nil{
+	if w != nil {
 		rst, err := json.Marshal(w)
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 		return rst
@@ -54,24 +54,42 @@ func NewEtcd3Client(addrs []string, timeout int, username, password string, tls 
 	}, nil
 }
 
-func(e *etcd3) Get(ctx context.Context, key string)  ([]byte, error){
+func (e *etcd3) Get(ctx context.Context, key string) ([]byte, error) {
 	r, err := e.c.Get(ctx, key)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	if len(r.Kvs) == 0{
+	if len(r.Kvs) == 0 {
 		return nil, fmt.Errorf("key is not exist")
 	}
 	return r.Kvs[0].Value, nil
 }
 
-func (e *etcd3) List(ctx context.Context, prefix string) ([][]byte, error){
+func (e *etcd3) Put(ctx context.Context, key string, value []byte, ttl int) error {
+	var op []clientv3.OpOption
+	if ttl > 0 {
+		lease, err := e.c.Grant(ctx, int64(ttl))
+		if err != nil {
+			return err
+		}
+		op = append(op, clientv3.WithLease(lease.ID))
+		// 如果keepalive没有挂，那么key就一直存在，如果keepalie挂了，超过ttl，key就消失了
+		_, err = e.c.KeepAlive(context.Background(), lease.ID)
+		if err != nil {
+			return err
+		}
+	}
+	_, err := e.c.Put(ctx, key, string(value), op...)
+	return err
+}
+
+func (e *etcd3) List(ctx context.Context, prefix string) ([][]byte, error) {
 	var rst [][]byte
 	r, err := e.c.Get(ctx, prefix, clientv3.WithPrefix())
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	if len(r.Kvs) == 0{
+	if len(r.Kvs) == 0 {
 		return nil, fmt.Errorf("keys is not exist")
 	}
 
@@ -106,7 +124,7 @@ func (e *etcd3) WatchTree(ctx context.Context, prefix string, stopCh <-chan stru
 						}
 					}
 					watchCh := &WatchResult{
-						KV: ev.Kv,
+						KV:      ev.Kv,
 						OptType: optType,
 					}
 					rst <- watchCh.ReverseToByte()
@@ -118,6 +136,6 @@ func (e *etcd3) WatchTree(ctx context.Context, prefix string, stopCh <-chan stru
 	return rst, nil
 }
 
-func (e *etcd3) Close(ctx context.Context){
+func (e *etcd3) Close(ctx context.Context) {
 	e.c.Close()
 }

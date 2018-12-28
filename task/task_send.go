@@ -16,7 +16,7 @@ func taskToSend(needRollbackData []*data.RequestInfo, subject string) {
 		if v.Times >= constant.RetryTimes && v.IsSend != constant.SendSuccess {
 			err := s.Send([]byte(fmt.Sprintf("this data is wrong, please check it. information: %+v", v)))
 			if err == nil {
-				c.UpdateRequestInfoSend(v.Id)
+				global.C.UpdateRequestInfoSend(v.Id)
 			}
 		}
 	}

@@ -4,15 +4,32 @@ import (
 	"flag"
 	"fmt"
 	"regexp"
+	"tcc_transaction/log"
 	"tcc_transaction/model"
+	"tcc_transaction/store/data"
+	"tcc_transaction/store/data/mysql"
 	"time"
 )
 
 var (
-	EmailUsername = flag.String("email-username", "", "")
-	EmailTo = flag.String("email-to", "", "email receiver, if have many please use ',' split.")
-	EmailPassword = flag.String("email-password", "", "")
+	// 数据库连接
+	C data.DataClient
+
+	EmailUsername      = flag.String("email-username", "", "")
+	EmailTo            = flag.String("email-to", "", "email receiver, if have many please use ',' split.")
+	EmailPassword      = flag.String("email-password", "", "")
 	MaxExceptionalData = flag.Int("max-exceptional-data", 100, "send msg when exceptional data than the value")
+
+	LogFilePath = flag.String("log-file-path", "", "log file path")
+	LogLevel    = flag.String("log-level", "", "log level")
+
+	MysqlUsername = flag.String("mysql-username", "tcc", "")
+	MysqlPassword = flag.String("mysql-password", "tcc_123", "")
+	MysqlHost = flag.String("mysql-host", "localhost", "")
+	MysqlPort = flag.String("mysql-port", "3306", "")
+	MysqlDatabase = flag.String("mysql-database", "tcc", "")
+
+	TimerInterval = flag.Int("timer-interval", 60 * 30, "unit is second")
 
 	Apis = []*model.Api{
 		{
@@ -60,6 +77,9 @@ var (
 
 func init() {
 	flag.Parse()
+	C = mysql.NewMysqlClient(*MysqlUsername, *MysqlPassword, *MysqlHost, *MysqlPort, *MysqlDatabase)
+
+	log.InitLogrus(*LogFilePath, *LogLevel)
 }
 
 func GetApiWithURL(url string) (*model.RuntimeApi, error) {
@@ -67,8 +87,8 @@ func GetApiWithURL(url string) (*model.RuntimeApi, error) {
 		reg, _ := regexp.Compile(v.UrlPattern)
 		if reg.MatchString(url) {
 			ra := &model.RuntimeApi{
-				UrlPattern:  v.UrlPattern,
-				Nodes:       model.ConverToRuntime(v.Nodes),
+				UrlPattern: v.UrlPattern,
+				Nodes:      model.ConverToRuntime(v.Nodes),
 			}
 			return ra, nil
 		}
