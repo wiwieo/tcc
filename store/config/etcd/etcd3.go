@@ -99,7 +99,7 @@ func (e *etcd3) List(ctx context.Context, prefix string) ([][]byte, error) {
 	return rst, nil
 }
 
-func (e *etcd3) WatchTree(ctx context.Context, prefix string, stopCh <-chan struct{}) (chan []byte, error) {
+func (e *etcd3) WatchTree(ctx context.Context, prefix string, callback func(k, v []byte, tpe string)) {
 	rch := e.c.Watch(ctx, prefix, clientv3.WithPrefix())
 	rst := make(chan []byte, 1)
 	go func() {
@@ -107,8 +107,6 @@ func (e *etcd3) WatchTree(ctx context.Context, prefix string, stopCh <-chan stru
 		for {
 			// Check if the watch was stopped by the caller
 			select {
-			case <-stopCh:
-				return
 			case wresp := <-rch:
 				for _, ev := range wresp.Events {
 					var optType string
@@ -123,17 +121,11 @@ func (e *etcd3) WatchTree(ctx context.Context, prefix string, stopCh <-chan stru
 							optType = WatchEventTypeM
 						}
 					}
-					watchCh := &WatchResult{
-						KV:      ev.Kv,
-						OptType: optType,
-					}
-					rst <- watchCh.ReverseToByte()
+					callback(ev.Kv.Key, ev.Kv.Value, optType)
 				}
 			}
-
 		}
 	}()
-	return rst, nil
 }
 
 func (e *etcd3) Close(ctx context.Context) {

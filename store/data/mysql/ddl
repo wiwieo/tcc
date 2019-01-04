@@ -1,3 +1,4 @@
+
 drop table if exists request_info;
 
 CREATE TABLE `request_info` (
@@ -18,9 +19,6 @@ DEFAULT CHARACTER SET=utf8 COLLATE=utf8_general_ci
 AUTO_INCREMENT=53
 ROW_FORMAT=DYNAMIC
 ;
-
-
-
 
 drop table if exists success_step;
 

@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-
 func tcc(writer http.ResponseWriter, request *http.Request) {
 	var response = &util.Response{}
 	params := util.GetParams(request)
@@ -89,7 +88,7 @@ func try(r *http.Request, api *model.RuntimeApi) ([]*model.RuntimeTCC, error) {
 			return nextCancelStep, fmt.Errorf(rst.Msg)
 		}
 		// 成功之后，将结果保存起来，以备使用
-		// TODO：如果插入失败，则无法处理，需要人工干预
+		// 如果插入失败，则直接返回，并在后续回滚之前的步骤
 		ss := &data.SuccessStep{
 			RequestId: api.RequestInfo.Id,
 			Index:     node.Index,
