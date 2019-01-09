@@ -1,4 +1,4 @@
-package global
+package various
 
 import (
 	"context"
@@ -6,47 +6,34 @@ import (
 	"flag"
 	"fmt"
 	"regexp"
+	"tcc_transaction/global/config"
 	"tcc_transaction/log"
 	"tcc_transaction/model"
 	"tcc_transaction/store/config/etcd"
 	"tcc_transaction/store/data"
+	"tcc_transaction/store/data/leveldb"
 	"tcc_transaction/store/data/mysql"
 	"time"
 )
 
 var (
 	// 数据库连接
-	C data.DataClient
-
-	EmailUsername      = flag.String("email-username", "", "")
-	EmailTo            = flag.String("email-to", "", "email receiver, if have many please use ',' split.")
-	EmailPassword      = flag.String("email-password", "", "")
-	MaxExceptionalData = flag.Int("max-exceptional-data", 100, "send msg when exceptional data than the value")
-
-	LogFilePath = flag.String("log-file-path", "", "log file path")
-	LogLevel    = flag.String("log-level", "", "log level")
-
-	MysqlUsername = flag.String("mysql-username", "root", "")
-	MysqlPassword = flag.String("mysql-password", "tcc_123", "")
-	MysqlHost     = flag.String("mysql-host", "127.0.0.1", "")
-	MysqlPort     = flag.String("mysql-port", "3306", "")
-	MysqlDatabase = flag.String("mysql-database", "tcc", "")
-
-	TimerInterval = flag.Int("timer-interval", 60*30, "unit is second")
-
-	ApiKeyPrefix = flag.String("api-key-prefix", "/tcc/api/", "")
-)
-
-var (
+	C        data.DataClient
 	apis     []*model.Api
 	etcdC, _ = etcd3.NewEtcd3Client([]string{"localhost:2379"}, int(time.Minute), "", "", nil)
 )
 
 func InitAll() {
 	flag.Parse()
-	C = mysql.NewMysqlClient(*MysqlUsername, *MysqlPassword, *MysqlHost, *MysqlPort, *MysqlDatabase)
-
-	log.InitLogrus(*LogFilePath, *LogLevel)
+	var err error
+	C, err = mysql.NewMysqlClient(*config.MysqlUsername, *config.MysqlPassword, *config.MysqlHost, *config.MysqlPort, *config.MysqlDatabase)
+	if err != nil {
+		C, err = leveldb.NewLevelDB(*config.DBPath)
+		if err != nil {
+			panic(err)
+		}
+	}
+	log.InitLogrus(*config.LogFilePath, *config.LogLevel)
 
 	LoadApiFromEtcd()
 	WatchApi()
@@ -80,7 +67,7 @@ func LoadApiFromEtcd() {
 		return rsts
 	}
 
-	data, err := etcdC.List(context.Background(), *ApiKeyPrefix)
+	data, err := etcdC.List(context.Background(), *config.ApiKeyPrefix)
 	if err != nil {
 		panic(err)
 	}
@@ -110,7 +97,7 @@ func WatchApi() {
 
 	getIdx := func(k []byte) int {
 		for idx, v := range apis {
-			if v.UrlPattern == string(k)[len(*ApiKeyPrefix):] {
+			if v.UrlPattern == string(k)[len(*config.ApiKeyPrefix):] {
 				return idx
 			}
 		}
@@ -128,5 +115,5 @@ func WatchApi() {
 		}
 	}
 
-	etcdC.WatchTree(context.Background(), *ApiKeyPrefix, callback)
+	etcdC.WatchTree(context.Background(), *config.ApiKeyPrefix, callback)
 }

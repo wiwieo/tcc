@@ -2,7 +2,7 @@ package email
 
 import (
 	"github.com/go-gomail/gomail"
-	"tcc_transaction/global"
+	"tcc_transaction/global/config"
 	"tcc_transaction/log"
 )
 
@@ -18,29 +18,29 @@ type Email struct {
 	Subject string
 	//Attach []byte
 	content chan []byte
-	err chan error
+	err     chan error
 }
 
 func NewEmailSender(from, subject string, to []string) *Email {
 	e := &Email{
-		From: from,
-		To: to,
+		From:    from,
+		To:      to,
 		Subject: subject,
 		content: make(chan []byte, 1),
-		err: make(chan error, 1),
+		err:     make(chan error, 1),
 	}
 	e.send()
 	return e
 }
 
-func (e *Email) Send(content []byte) error{
+func (e *Email) Send(content []byte) error {
 	e.content <- content
-	return <- e.err
+	return <-e.err
 }
 
 func (e *Email) send() {
 	go func() {
-		d := gomail.NewDialer(Host, Port, *global.EmailUsername, *global.EmailPassword)
+		d := gomail.NewDialer(Host, Port, *config.EmailUsername, *config.EmailPassword)
 
 		var s gomail.SendCloser
 		var err error

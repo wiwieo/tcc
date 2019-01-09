@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"tcc_transaction/constant"
-	"tcc_transaction/global"
+	"tcc_transaction/global/various"
 	"tcc_transaction/log"
 	"tcc_transaction/model"
 	"tcc_transaction/store/data"
@@ -24,7 +24,7 @@ func tcc(writer http.ResponseWriter, request *http.Request) {
 		Method: request.Method,
 		Param:  string(params),
 	}
-	err := global.C.InsertRequestInfo(ri)
+	err := various.C.InsertRequestInfo(ri)
 	if err != nil {
 		response.Code = constant.InsertTccDataErrCode
 		response.Msg = err.Error()
@@ -32,7 +32,7 @@ func tcc(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	runtimeAPI, err := global.GetApiWithURL(request.RequestURI[len(serverName)+1:])
+	runtimeAPI, err := various.GetApiWithURL(request.RequestURI[len(serverName)+1:])
 	if err != nil {
 		response.Code = constant.NotFoundErrCode
 		response.Msg = err.Error()
@@ -98,7 +98,7 @@ func try(r *http.Request, api *model.RuntimeApi) ([]*model.RuntimeTCC, error) {
 			Result:    string(dt),
 			Status:    constant.RequestTypeTry,
 		}
-		err = global.C.InsertSuccessStep(ss)
+		err = various.C.InsertSuccessStep(ss)
 		tryNodes[idx].SuccessStep = ss
 		nextCancelStep = append(nextCancelStep, tryNodes[idx])
 		if err != nil {
@@ -133,15 +133,15 @@ func confirm(r *http.Request, api *model.RuntimeApi) error {
 		}
 
 		// 处理成功后，修改状态
-		global.C.Confirm(api.RequestInfo.Id)
+		various.C.Confirm(api.RequestInfo.Id)
 	}
 
 	// 全部提交成功，则修改状态为提交成功，避免重复调用
-	global.C.UpdateRequestInfoStatus(constant.RequestInfoStatus_1, api.RequestInfo.Id)
+	various.C.UpdateRequestInfoStatus(constant.RequestInfoStatus1, api.RequestInfo.Id)
 
 	return nil
 ERROR:
-	global.C.UpdateRequestInfoStatus(constant.RequestInfoStatus_2, api.RequestInfo.Id)
+	various.C.UpdateRequestInfoStatus(constant.RequestInfoStatus2, api.RequestInfo.Id)
 	log.Errorf("confirm failed, please check it. error info is: %+v", err)
 	return err
 }
@@ -174,12 +174,12 @@ func cancel(r *http.Request, api *model.RuntimeApi, nodes []*model.RuntimeTCC) e
 			continue
 		}
 		// 处理成功后，修改状态
-		global.C.UpdateSuccessStepStatus(node.SuccessStep.Id, constant.RequestTypeCancel)
+		various.C.UpdateSuccessStepStatus(api.RequestInfo.Id, node.SuccessStep.Id, constant.RequestTypeCancel)
 	}
-	global.C.UpdateRequestInfoStatus(constant.RequestInfoStatus_3, api.RequestInfo.Id)
+	various.C.UpdateRequestInfoStatus(constant.RequestInfoStatus3, api.RequestInfo.Id)
 	return nil
 ERROR:
 	log.Errorf("cancel failed, please check it. error info is: %+v", err)
-	global.C.UpdateRequestInfoStatus(constant.RequestInfoStatus_4, api.RequestInfo.Id)
+	various.C.UpdateRequestInfoStatus(constant.RequestInfoStatus4, api.RequestInfo.Id)
 	return err
 }

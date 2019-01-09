@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"tcc_transaction/constant"
-	"tcc_transaction/global"
+	"tcc_transaction/global/various"
 	"tcc_transaction/log"
 	"tcc_transaction/model"
 	"tcc_transaction/store/data"
@@ -13,26 +13,26 @@ import (
 )
 
 func taskToRetry(needRollbackData []*data.RequestInfo) {
-	println(fmt.Sprintf("start to retry, data is : %+v", needRollbackData))
+	println(fmt.Sprintf("start to retry, data is : %+v", len(needRollbackData)))
 	for _, v := range needRollbackData {
 		if len(v.SuccessSteps) == 0 {
 			continue
 		}
 
-		if v.Times >= constant.RetryTimes{
+		if v.Times >= constant.RetryTimes {
 			continue
 		}
 
-		runtimeAPI, err := global.GetApiWithURL(v.Url)
+		runtimeAPI, err := various.GetApiWithURL(v.Url)
 		if err != nil {
 			log.Errorf("get api by url of [request_info] failed, please check it. error information is: %s", err)
 			continue
 		}
 		runtimeAPI.RequestInfo = v
 
-		if v.Status == constant.RequestInfoStatus_2 {
+		if v.Status == constant.RequestInfoStatus2 {
 			go confirm(runtimeAPI)
-		} else if v.Status == constant.RequestInfoStatus_4 {
+		} else if v.Status == constant.RequestInfoStatus4 {
 			go cancel(runtimeAPI)
 		}
 	}
@@ -50,12 +50,12 @@ func confirm(api *model.RuntimeApi) {
 			log.Errorf("asynchronous to confirm failed, please check it. error information is: %s", err)
 			continue
 		}
-		global.C.UpdateSuccessStepStatus(v.Id, constant.RequestTypeConfirm)
+		various.C.UpdateSuccessStepStatus(api.RequestInfo.Id, v.Id, constant.RequestTypeConfirm)
 	}
 	if !isErr {
-		global.C.Confirm(ri.Id)
+		various.C.Confirm(ri.Id)
 	} else {
-		global.C.UpdateRequestInfoTimes(ri.Id)
+		various.C.UpdateRequestInfoTimes(ri.Id)
 	}
 }
 
@@ -76,21 +76,21 @@ func cancel(api *model.RuntimeApi) {
 		err = json.Unmarshal(dt, &rst)
 		if err != nil {
 			isErr = true
-			log.Errorf("asynchronous to confirm, the content format of response back is wrong, please check it. error information is: %s", err)
+			log.Errorf("asynchronous to cancel, the content format of response back is wrong, please check it. error information is: %s", err)
 			continue
 		}
 
 		if rst.Code != constant.Success {
 			isErr = true
-			log.Errorf("asynchronous to confirm, response back content is wrong, please check it. error information is: %s", err)
+			log.Errorf("asynchronous to cancel, response back content is wrong, please check it. error information is: %s", err)
 			continue
 		}
 
-		global.C.UpdateSuccessStepStatus(v.Id, constant.RequestTypeCancel)
+		various.C.UpdateSuccessStepStatus(api.RequestInfo.Id, v.Id, constant.RequestTypeCancel)
 	}
 	if !isErr {
-		global.C.UpdateRequestInfoStatus(constant.RequestInfoStatus_3, ri.Id)
+		various.C.UpdateRequestInfoStatus(constant.RequestInfoStatus3, ri.Id)
 	} else {
-		global.C.UpdateRequestInfoTimes(ri.Id)
+		various.C.UpdateRequestInfoTimes(ri.Id)
 	}
 }

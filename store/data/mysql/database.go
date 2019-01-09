@@ -4,6 +4,7 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"tcc_transaction/constant"
 	"tcc_transaction/log"
 	"tcc_transaction/store/data"
 	"time"
@@ -20,20 +21,24 @@ type MysqlClient struct {
 }
 
 // tcc:tcc_123@tcp(localhost:3306)/tcc?charset=utf8
-func NewMysqlClient(user, pwd, host, port, database string) *MysqlClient {
+func NewMysqlClient(user, pwd, host, port, database string) (*MysqlClient, error) {
 	db, err := sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", user, pwd, host, port, database))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
 	db.SetConnMaxLifetime(maxLifeTime * time.Second)
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
 	return &MysqlClient{
 		c: db,
-	}
+	}, nil
 }
 
-func (c *MysqlClient) InsertRequestInfo(r *data.RequestInfo) (error) {
+func (c *MysqlClient) InsertRequestInfo(r *data.RequestInfo) error {
 	sql := `INSERT INTO request_info (url, method, param) values(?, ?, ?)`
 	rst, err := c.c.Exec(sql, r.Url, r.Method, r.Param)
 	if err != nil {
@@ -61,8 +66,8 @@ func (c *MysqlClient) UpdateRequestInfoTimes(id int64) error {
 }
 
 func (c *MysqlClient) UpdateRequestInfoSend(id int64) error {
-	sql := `UPDATE request_info SET is_send = 1 where id = ?`
-	_, err := c.c.Exec(sql, id)
+	sql := `UPDATE request_info SET is_send = 1, status=? where id = ?`
+	_, err := c.c.Exec(sql, constant.RequestInfoStatus5, id)
 	return err
 }
 
@@ -97,7 +102,7 @@ func (c *MysqlClient) ListExceptionalRequestInfo() ([]*data.RequestInfo, error) 
 	return rst, nil
 }
 
-func (c *MysqlClient) InsertSuccessStep(s *data.SuccessStep) (error) {
+func (c *MysqlClient) InsertSuccessStep(s *data.SuccessStep) error {
 	sql := `INSERT INTO success_step (request_id, idx, status, url, method, param, try_result) values(?, ?, ?, ?, ?, ?, ?)`
 	rst, err := c.c.Exec(sql, s.RequestId, s.Index, s.Status, s.Url, s.Method, s.Param, s.Result)
 	if err != nil {
@@ -111,9 +116,9 @@ func (c *MysqlClient) InsertSuccessStep(s *data.SuccessStep) (error) {
 	return nil
 }
 
-func (c *MysqlClient) UpdateSuccessStepStatus(id int64, status int) error {
-	sql := `UPDATE success_step SET status = ? WHERE id = ?`
-	_, err := c.c.Exec(sql, id, status)
+func (c *MysqlClient) UpdateSuccessStepStatus(rid, sid int64, status int) error {
+	sql := `UPDATE success_step SET status = ? WHERE id = ? AND request_id = ?`
+	_, err := c.c.Exec(sql, status, sid, rid)
 	return err
 }
 
