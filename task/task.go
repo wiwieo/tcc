@@ -16,8 +16,9 @@ type Task struct {
 }
 
 func (ts *Task) Start() {
-	if !ts.off {
-		go ts.Exec()
+	if ts.off {
+		ts.off = false
+		go ts.exec()
 	}
 }
 
@@ -26,7 +27,7 @@ func (ts *Task) Stop() {
 	ts.Off <- true
 }
 
-func (ts *Task) Exec() {
+func (ts *Task) exec() {
 	t := time.NewTicker(time.Second * ts.Interval)
 FOR:
 	for {
@@ -57,11 +58,17 @@ func Stop() {
 
 func retryAndSend() {
 	data := getBaseData()
+	if len(data) == 0 {
+		return
+	}
 	go taskToRetry(data)
 	go taskToSend(data, "there is some exceptional data, please hurry up to resolve it")
 }
 
+// TODO 在使用levelDB时，因为数据没有共享，所以不存在并发问题
+// 在使用共享数据（mysql）时， 分布式环境下，可能需要防止同时执行一个任务
 func getBaseData() []*data.RequestInfo {
+	// TODO 此处需要使用互斥锁 或者 简单起见， 只开一个任务
 	needRollbackData, err := various.C.ListExceptionalRequestInfo()
 	if err != nil {
 		log.Errorf("the data that required for the task is failed to load, please check it. error information: %s", err)

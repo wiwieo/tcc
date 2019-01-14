@@ -54,7 +54,13 @@ func (c *LevelDBClient) insertExceptionRequestInfo(ri *data.RequestInfo) error {
 	if err != nil {
 		return err
 	}
+
 	return c.db.Put([]byte(key), data, nil)
+}
+
+func (c *LevelDBClient) delExceptionRequestInfo(id int64) error {
+	key := fmt.Sprintf(KeyExceptionRequestInfo, id)
+	return c.db.Delete([]byte(key), nil)
 }
 
 func (c *LevelDBClient) getRequestInfo(id int64) (*data.RequestInfo, error) {
@@ -86,6 +92,8 @@ func (c *LevelDBClient) UpdateRequestInfoStatus(status int, id int64) error {
 	switch status {
 	case constant.RequestInfoStatus2, constant.RequestInfoStatus4:
 		return c.insertExceptionRequestInfo(ri)
+	case constant.RequestInfoStatus1, constant.RequestInfoStatus3:
+		c.delExceptionRequestInfo(id)
 	}
 	return nil
 }
@@ -109,7 +117,13 @@ func (c *LevelDBClient) UpdateRequestInfoSend(id int64) error {
 	}
 	ri.IsSend = 1
 	ri.Status = constant.RequestInfoStatus5
-	return c.InsertRequestInfo(ri)
+	err = c.InsertRequestInfo(ri)
+	if err != nil {
+		return err
+	}
+	// 当一个完整流程走完后，删除辅助数据
+	go c.delExceptionRequestInfo(id)
+	return nil
 }
 
 // 查找所有异常数据（状态为：2(提交失败)和4(回滚失败)）
@@ -151,6 +165,25 @@ func (c *LevelDBClient) InsertSuccessStep(s *data.SuccessStep) error {
 		return err
 	}
 	return c.db.Put([]byte(key), data, nil)
+}
+
+func (c *LevelDBClient) BatchInsertSuccessStep(ss []*data.SuccessStep) error {
+	for _, s := range ss {
+		if s.Id == 0 {
+			s.Id = generateID()
+		}
+		key := fmt.Sprintf(KeySuccessStep, s.RequestId, s.Id)
+		data, err := json.Marshal(s)
+		if err != nil {
+			return err
+		}
+
+		err = c.db.Put([]byte(key), data, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *LevelDBClient) getSuccessStep(rid, sid int64) (*data.SuccessStep, error) {

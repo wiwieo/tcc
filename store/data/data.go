@@ -13,6 +13,7 @@ type DataClient interface {
 	ListExceptionalRequestInfo() ([]*RequestInfo, error)
 	// 将成功Try的信息存入数据库
 	InsertSuccessStep(s *SuccessStep) error
+	BatchInsertSuccessStep(s []*SuccessStep) error
 	// 更新成功Try的状态
 	UpdateSuccessStepStatus(rid, sid int64, status int) error
 	// 全部提交成功后，修改对应的状态（请求信息为：提交成功，Try信息状态为：提交成功）

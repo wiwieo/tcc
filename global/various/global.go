@@ -72,7 +72,6 @@ func LoadApiFromEtcd() {
 		panic(err)
 	}
 	apis = parseToApi(data)
-	println(len(apis))
 }
 
 func WatchApi() {

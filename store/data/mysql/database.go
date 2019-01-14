@@ -83,6 +83,7 @@ func (c *MysqlClient) ListExceptionalRequestInfo() ([]*data.RequestInfo, error) 
 				   deleted 
 			  FROM request_info
 			 WHERE status in (2, 4) 
+			   AND is_send = 0
 			   AND deleted = 0`
 
 	err := c.c.Select(&rst, sql)
@@ -114,6 +115,30 @@ func (c *MysqlClient) InsertSuccessStep(s *data.SuccessStep) error {
 	}
 	s.Id = id
 	return nil
+}
+
+// 因为需要获取自增主键，所以无法使用一个sql进行批处理
+func (c *MysqlClient) BatchInsertSuccessStep(ss []*data.SuccessStep) error {
+	sql := `INSERT INTO success_step (request_id, idx, status, url, method, param, try_result) values(?, ?, ?, ?, ?, ?, ?)`
+	tx, err := c.c.Begin()
+	if err != nil {
+		return err
+	}
+	for _, s := range ss {
+		rst, err := tx.Exec(sql, s.RequestId, s.Index, s.Status, s.Url, s.Method, s.Param, s.Result)
+		if err != nil {
+			goto Rollback
+		}
+		id, err := rst.LastInsertId()
+		if err != nil {
+			goto Rollback
+		}
+		s.Id = id
+	}
+	return tx.Commit()
+Rollback:
+	tx.Rollback()
+	return err
 }
 
 func (c *MysqlClient) UpdateSuccessStepStatus(rid, sid int64, status int) error {
