@@ -2,7 +2,6 @@ package task
 
 import (
 	"encoding/json"
-	"fmt"
 	"tcc_transaction/constant"
 	"tcc_transaction/global/various"
 	"tcc_transaction/log"
@@ -13,7 +12,7 @@ import (
 )
 
 func taskToRetry(needRollbackData []*data.RequestInfo) {
-	println(fmt.Sprintf("start to retry, data is : %+v", len(needRollbackData)))
+	log.Infof("start to retry, data is : %+v", len(needRollbackData))
 	for _, v := range needRollbackData {
 		if len(v.SuccessSteps) == 0 {
 			continue

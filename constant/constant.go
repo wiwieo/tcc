@@ -22,4 +22,5 @@ const (
 	RetryTimes  = 5 // 重复多少次，不再重试，需要进行人工干预
 	SendSuccess = 1 // 已发送邮件
 
+	LockEtcdPrefix = "/lock/etcd/task"
 )

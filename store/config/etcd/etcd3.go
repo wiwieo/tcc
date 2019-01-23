@@ -17,7 +17,7 @@ const (
 )
 
 type etcd3 struct {
-	c *clientv3.Client
+	C *clientv3.Client
 }
 
 type WatchResult struct {
@@ -50,12 +50,12 @@ func NewEtcd3Client(addrs []string, timeout int, username, password string, tls 
 	}
 
 	return &etcd3{
-		c: c,
+		C: c,
 	}, nil
 }
 
 func (e *etcd3) Get(ctx context.Context, key string) ([]byte, error) {
-	r, err := e.c.Get(ctx, key)
+	r, err := e.C.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -65,27 +65,28 @@ func (e *etcd3) Get(ctx context.Context, key string) ([]byte, error) {
 	return r.Kvs[0].Value, nil
 }
 
+// ttl: unit second
 func (e *etcd3) Put(ctx context.Context, key string, value []byte, ttl int) error {
 	var op []clientv3.OpOption
 	if ttl > 0 {
-		lease, err := e.c.Grant(ctx, int64(ttl))
+		lease, err := e.C.Grant(ctx, int64(ttl))
 		if err != nil {
 			return err
 		}
 		op = append(op, clientv3.WithLease(lease.ID))
 		// 如果keepalive没有挂，那么key就一直存在，如果keepalie挂了，超过ttl，key就消失了
-		_, err = e.c.KeepAlive(context.Background(), lease.ID)
+		_, err = e.C.KeepAlive(ctx, lease.ID)
 		if err != nil {
 			return err
 		}
 	}
-	_, err := e.c.Put(ctx, key, string(value), op...)
+	_, err := e.C.Put(ctx, key, string(value), op...)
 	return err
 }
 
 func (e *etcd3) List(ctx context.Context, prefix string) ([][]byte, error) {
 	var rst [][]byte
-	r, err := e.c.Get(ctx, prefix, clientv3.WithPrefix())
+	r, err := e.C.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (e *etcd3) List(ctx context.Context, prefix string) ([][]byte, error) {
 }
 
 func (e *etcd3) WatchTree(ctx context.Context, prefix string, callback func(k, v []byte, tpe string)) {
-	rch := e.c.Watch(ctx, prefix, clientv3.WithPrefix())
+	rch := e.C.Watch(ctx, prefix, clientv3.WithPrefix())
 	rst := make(chan []byte, 1)
 	go func() {
 		defer close(rst)
@@ -129,5 +130,5 @@ func (e *etcd3) WatchTree(ctx context.Context, prefix string, callback func(k, v
 }
 
 func (e *etcd3) Close(ctx context.Context) {
-	e.c.Close()
+	e.C.Close()
 }

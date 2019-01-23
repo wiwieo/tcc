@@ -1,10 +1,13 @@
 package task
 
 import (
+	"context"
+	"tcc_transaction/constant"
 	"tcc_transaction/global/config"
 	"tcc_transaction/global/various"
 	"tcc_transaction/log"
 	"tcc_transaction/store/data"
+	"tcc_transaction/store/lock"
 	"time"
 )
 
@@ -57,18 +60,29 @@ func Stop() {
 }
 
 func retryAndSend() {
+	ctx := context.Background()
+	l, err := lock.NewEtcdLock(ctx, *config.TimerInterval, constant.LockEtcdPrefix)
+	if err != nil {
+		log.Warnf("cannot execute task because of the lock is got failed, error info is: %s", err)
+		return
+	}
+
+	err = l.Lock(ctx)
+	if err != nil {
+		log.Warnf("cannot execute task because of the locker is not locked, error info is: %s", err)
+		return
+	}
+	defer l.Unlock(ctx)
+
 	data := getBaseData()
 	if len(data) == 0 {
 		return
 	}
 	go taskToRetry(data)
-	go taskToSend(data, "there is some exceptional data, please hurry up to resolve it")
+	go taskToSend(data, "there are some exceptional data, please fix it soon")
 }
 
-// TODO 在使用levelDB时，因为数据没有共享，所以不存在并发问题
-// 在使用共享数据（mysql）时， 分布式环境下，可能需要防止同时执行一个任务
 func getBaseData() []*data.RequestInfo {
-	// TODO 此处需要使用互斥锁 或者 简单起见， 只开一个任务
 	needRollbackData, err := various.C.ListExceptionalRequestInfo()
 	if err != nil {
 		log.Errorf("the data that required for the task is failed to load, please check it. error information: %s", err)

@@ -20,7 +20,7 @@ var (
 	// 数据库连接
 	C        data.DataClient
 	apis     []*model.Api
-	etcdC, _ = etcd3.NewEtcd3Client([]string{"localhost:2379"}, int(time.Minute), "", "", nil)
+	EtcdC, _ = etcd3.NewEtcd3Client([]string{"localhost:2379"}, int(time.Minute), "", "", nil)
 )
 
 func InitAll() {
@@ -67,7 +67,7 @@ func LoadApiFromEtcd() {
 		return rsts
 	}
 
-	data, err := etcdC.List(context.Background(), *config.ApiKeyPrefix)
+	data, err := EtcdC.List(context.Background(), *config.ApiKeyPrefix)
 	if err != nil {
 		panic(err)
 	}
@@ -114,5 +114,5 @@ func WatchApi() {
 		}
 	}
 
-	etcdC.WatchTree(context.Background(), *config.ApiKeyPrefix, callback)
+	EtcdC.WatchTree(context.Background(), *config.ApiKeyPrefix, callback)
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"tcc_transaction/global"
+	"tcc_transaction/global/config"
 	"tcc_transaction/model"
 	"tcc_transaction/store/config/etcd"
 	"time"
@@ -12,6 +12,46 @@ import (
 var apis = []*model.Api{
 	{
 		UrlPattern: "^accounts/order/(.)*",
+		Nodes: []*model.TCC{
+			{
+				Index: 0,
+				Try: &model.Node{
+					Url:     "http://localhost:8083/accounts/order/try/$1",
+					Method:  "POST",
+					Timeout: 5 * int(time.Second),
+				},
+				Confirm: &model.Node{
+					Url:     "http://localhost:8083/accounts/order/confirm/$1",
+					Method:  "POST",
+					Timeout: 5 * int(time.Second),
+				},
+				Cancel: &model.Node{
+					Url:     "http://localhost:8083/accounts/order/cancel/$1",
+					Method:  "POST",
+					Timeout: 5 * int(time.Second),
+				},
+			}, {
+				Index: 1,
+				Try: &model.Node{
+					Url:     "http://localhost:8084/orders/order/try/$1",
+					Method:  "POST",
+					Timeout: 5 * int(time.Second),
+				},
+				Confirm: &model.Node{
+					Url:     "http://localhost:8084/orders/order/confirm/$1",
+					Method:  "POST",
+					Timeout: 5 * int(time.Second),
+				},
+				Cancel: &model.Node{
+					Url:     "http://localhost:8084/orders/order/cancel/$1",
+					Method:  "POST",
+					Timeout: 5 * int(time.Second),
+				},
+			},
+		},
+	},
+	{
+		UrlPattern: "^examples/(.)*",
 		Nodes: []*model.TCC{
 			{
 				Index: 0,
@@ -67,7 +107,7 @@ func put() {
 		if err != nil {
 			panic(err)
 		}
-		err = st.Put(context.Background(), *global.ApiKeyPrefix+v.UrlPattern, data, 0)
+		err = st.Put(context.Background(), *config.ApiKeyPrefix+v.UrlPattern, data, 0)
 		if err != nil {
 			panic(err)
 		}

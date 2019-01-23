@@ -35,7 +35,7 @@ type tcc interface {
 
 // 默认的处理逻辑
 // 如果有和业务耦合无法剥离的情况，需要自定义处理
-// 只要正常实现接口tcc的接口即可
+// 只要实现接口tcc的接口即可
 type DefaultTcc struct {
 }
 

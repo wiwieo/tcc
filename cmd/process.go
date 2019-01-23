@@ -31,6 +31,7 @@ func (p *proxy) process(writer http.ResponseWriter, request *http.Request) {
 		response.Code = constant.InsertTccDataErrCode
 		response.Msg = err.Error()
 		util.ResponseWithJson(writer, response)
+		log.Errorf("program have a bug, please check it. error info: %s", err)
 		return
 	}
 
@@ -39,6 +40,7 @@ func (p *proxy) process(writer http.ResponseWriter, request *http.Request) {
 		response.Code = constant.NotFoundErrCode
 		response.Msg = err.Error()
 		util.ResponseWithJson(writer, response)
+		log.Warnf("there is no request info in configuration")
 		return
 	}
 	runtimeAPI.RequestInfo = ri
@@ -72,9 +74,6 @@ func (p *proxy) try(r *http.Request, api *model.RuntimeApi) ([]*model.RuntimeTCC
 	}
 
 	success, err := p.t.Try(r, api)
-	if len(success) == 0 {
-		return nil, fmt.Errorf("no success method")
-	}
 
 	err2 := various.C.BatchInsertSuccessStep(success)
 	if err != nil || err2 != nil {
@@ -90,6 +89,9 @@ func (p *proxy) try(r *http.Request, api *model.RuntimeApi) ([]*model.RuntimeTCC
 	}
 	if err2 != nil {
 		return nextCancelStep, err2
+	}
+	if len(success) == 0 {
+		return nil, fmt.Errorf("no successful method of execution")
 	}
 	return nextCancelStep, nil
 }

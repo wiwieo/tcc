@@ -26,14 +26,11 @@ var (
 	MysqlPort     = flag.String("mysql-port", "3306", "")
 	MysqlDatabase = flag.String("mysql-database", "tcc", "")
 
-	// sqlite
-	DBPath = flag.String("sqlite-db-path", "./tcc", "")
+	// levelDB
+	DBPath = flag.String("level-db-path", "./tcc", "")
 
+	// a interval time that is to execute task
 	TimerInterval = flag.Int("timer-interval", 60*30, "unit is second")
 
 	ApiKeyPrefix = flag.String("api-key-prefix", "/tcc/api/", "")
 )
-
-func init() {
-	flag.Parse()
-}
